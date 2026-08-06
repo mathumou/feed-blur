@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Feed Blur",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Blurs photos and videos in your Facebook feed. Move your mouse over anything to reveal it.",
   "minimum_chrome_version": "105",
   "permissions": [
