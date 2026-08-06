@@ -1,0 +1,86 @@
+/* Feed Blur — options.css */
+
+body {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px;
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1c1e21;
+  background: #fff;
+}
+
+h1 {
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+
+.lede {
+  color: #65676b;
+  margin: 0 0 16px;
+}
+
+section {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e4e6e9;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+output {
+  font-variant-numeric: tabular-nums;
+  color: #65676b;
+  white-space: nowrap;
+}
+
+input[type="range"] {
+  width: 100%;
+  margin: 4px 0 8px;
+}
+
+.preview-frame {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #d0d2d6;
+  max-width: 240px;
+}
+
+#preview {
+  height: 90px;
+  background:
+    radial-gradient(circle at 76% 26%, #ffd76e 0 9%, transparent 12%),
+    linear-gradient(180deg, #7ec3e8 0 55%, #6aa657 55% 78%, #4d7a3f 78% 100%);
+  /* Same chain as content.css section 2, with luminance 1 (white page);
+     blur scales down with cover, mirroring the real rules. */
+  filter: contrast(calc(1 - var(--c, 0)))
+          brightness(calc(1 + var(--c, 0)))
+          blur(calc(var(--r, 8) * 0.5px * (1 - var(--c, 0))));
+  transition: filter 150ms ease;
+}
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid #ccd0d5;
+  border-radius: 6px;
+  background: #f0f2f5;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #e4e6e9;
+}

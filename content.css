@@ -1,0 +1,239 @@
+/* ==========================================================================
+   Feed Blur — content.css
+
+   Injected via manifest content_scripts.css, which Chrome inserts BEFORE any
+   DOM is constructed or displayed — so this stylesheet exists before the
+   page's first paint, independent of the scripts' run_at. That property
+   carries the entire "no flash of unblurred content" guarantee:
+
+   FAIL-CLOSED DESIGN. The coarse selectors below blur *likely* content media
+   by default, with zero JS involvement. Real Facebook content images come
+   from scontent*.fbcdn.net (link-preview thumbnails from external*.fbcdn.net),
+   while UI sprites (/rsrc.php) and emoji (static.xx.fbcdn.net) never contain
+   those substrings — so pure-CSS attribute selectors can discriminate.
+   Attribute matching is atomic with respect to paint: when Facebook lazily
+   sets src/srcset on an <img>, style is recalculated in the same rendering
+   update that would paint the new pixels, so there is no possible frame where
+   a content image renders unblurred. content.js then *refines*: it classifies
+   each candidate and stamps data-feedblur="media|video|avatar|off". Every
+   coarse selector carries :not([data-feedblur]) so it self-retires per element
+   once classified; "off" matches no rule at all, which is how false positives
+   (UI chrome, sub-minSize images, excluded contexts) get un-blurred without
+   any !important war.
+
+   SETTINGS GATES. Root attributes on <html> (stamped by boot.js/content.js)
+   gate behavior with absence-is-safe semantics — before any JS runs, the
+   fail-closed default applies:
+     [data-feedblur-off]      → extension disabled (blur rules off)
+     [data-feedblur-nohover]  → hover reveal disabled
+     [data-feedblur-novideos] → video blur disabled
+     [data-feedblur-avatars]  → avatar blur ENABLED (opt-in; default off)
+   Blur strength, reveal delay and cover opacity are custom properties on
+   :root, so slider changes restyle instantly with no re-scan. "Cover" is
+   implemented INSIDE the filter chain: contrast(1 - cover) collapses the
+   media toward neutral gray, then brightness steers that gray to the page's
+   sampled background luminance (--feedblur-cover-lum, set by content.js from
+   the real body background — light or dark theme both land automatically).
+   At 100% the element renders as an opaque theme-colored patch, which also
+   covers Facebook's own dark letterbox/placeholder backdrops BEHIND the
+   media — an opacity fade would let those show through as wrong-colored
+   boxes, and overlay DOM is impossible anyway (pseudo-elements don't render
+   on replaced elements like img/video).
+
+   SPECIFICITY / ORDER CONTRACT. All media selector lists live inside :where()
+   (zero specificity), so rule weight comes only from the html-prefix and the
+   :hover/:focus-visible compounds. Reveal rules therefore always outweigh or
+   tie the blur rules — and MUST stay AFTER them in this file, since ties are
+   resolved by source order. The media lists are repeated across rules by hand
+   (no build step); keep them in sync when tuning.
+   ========================================================================== */
+
+/* ---- 1. Tunables (JS overrides these on :root; defaults work pre-JS) ---- */
+:root {
+  --feedblur-radius: 8px;
+  --feedblur-reveal-delay: 0ms;
+  --feedblur-cover: 0;        /* 0..1; how far media fades toward the page bg */
+  --feedblur-cover-lum: 1;    /* 0..1 page-background luminance; sampled by JS */
+}
+
+/* ---- 2. Blur rules --------------------------------------------------------
+   Deliberately NO transition on these rules: the blurred state must be
+   reachable instantly. A transition here would animate blur-in from sharp —
+   CSS transitions fire whenever a coarse selector *starts* matching (e.g.
+   Facebook setting a scontent src on an already-rendered lazy placeholder),
+   and the first frames of a none→blur ramp paint the content recognizable.
+   Transitions live only on the reveal rules (3, 4) and on the confirmed-
+   marker rule (2d), so reveals animate while every fail-closed entry into
+   the blurred state is instant.
+   clip-path: inset(0) clips the ~radius px of blur bleed to the element's own
+   box, for the few containers Facebook doesn't overflow-clip. */
+
+/* 2a. Images + inline-style background divs (coarse + confirmed). */
+html:not([data-feedblur-off]) :where(
+  img[src*="scontent"]:not([data-feedblur]),
+  img[srcset*="scontent"]:not([data-feedblur]),
+  img[src*="external"]:not([data-feedblur]),
+  picture:has(source[srcset*="scontent"]) img:not([data-feedblur]),
+  div[style*="background-image"][style*="scontent"]:not([data-feedblur]),
+  [data-feedblur="media"]
+) {
+  /* Fade toward the page background color: contrast(1-c) pulls pixels toward
+     mid-gray, brightness rescales that gray to the sampled background
+     luminance. c=0 → identity; c=1 → solid theme-colored patch.
+     The blur radius SCALES DOWN as cover rises — verified live on facebook:
+     Chrome's compositor lets contrast's +0.5 intercept interact with the
+     blur's semi-transparent edge band REGARDLESS of the declared function
+     order, painting a bright halo ring ~radius wide around the media. Fading
+     out the blur as the fade takes over kills the ring entirely at full
+     cover (the patch needs no blur anyway) and shrinks it proportionally at
+     partial cover. Do not "simplify" this back to a constant radius. */
+  filter: contrast(calc(1 - var(--feedblur-cover)))
+          brightness(calc(1 + (2 * var(--feedblur-cover-lum) - 1) * var(--feedblur-cover)))
+          blur(calc(var(--feedblur-radius) * (1 - var(--feedblur-cover))));
+  clip-path: inset(0);
+}
+
+/* 2b. Videos. Facebook video src is blob: (MSE), so URLs can't discriminate —
+   but on facebook.com every <video> is content, so the bare type selector is
+   the coarse rule. Gated by the blurVideos setting. */
+html:not([data-feedblur-off]):not([data-feedblur-novideos]) :where(
+  video:not([data-feedblur]),
+  [data-feedblur="video"]
+) {
+  /* Fade toward the page background color: contrast(1-c) pulls pixels toward
+     mid-gray, brightness rescales that gray to the sampled background
+     luminance. c=0 → identity; c=1 → solid theme-colored patch.
+     The blur radius SCALES DOWN as cover rises — verified live on facebook:
+     Chrome's compositor lets contrast's +0.5 intercept interact with the
+     blur's semi-transparent edge band REGARDLESS of the declared function
+     order, painting a bright halo ring ~radius wide around the media. Fading
+     out the blur as the fade takes over kills the ring entirely at full
+     cover (the patch needs no blur anyway) and shrinks it proportionally at
+     partial cover. Do not "simplify" this back to a constant radius. */
+  filter: contrast(calc(1 - var(--feedblur-cover)))
+          brightness(calc(1 + (2 * var(--feedblur-cover-lum) - 1) * var(--feedblur-cover)))
+          blur(calc(var(--feedblur-radius) * (1 - var(--feedblur-cover))));
+  clip-path: inset(0);
+}
+
+/* 2c. Avatars (<svg><image>) — OPT-IN via the blurAvatars setting. The coarse
+   selector targets the inner <image> ([*|href] matches both the SVG2 href and
+   legacy xlink:href attributes with no @namespace rule needed) and retires
+   when JS marks the <svg> root; the confirmed rule blurs the root. */
+html:not([data-feedblur-off])[data-feedblur-avatars] :where(
+  svg:not([data-feedblur]) image[*|href*="scontent"],
+  [data-feedblur="avatar"]
+) {
+  /* Fade toward the page background color: contrast(1-c) pulls pixels toward
+     mid-gray, brightness rescales that gray to the sampled background
+     luminance. c=0 → identity; c=1 → solid theme-colored patch.
+     The blur radius SCALES DOWN as cover rises — verified live on facebook:
+     Chrome's compositor lets contrast's +0.5 intercept interact with the
+     blur's semi-transparent edge band REGARDLESS of the declared function
+     order, painting a bright halo ring ~radius wide around the media. Fading
+     out the blur as the fade takes over kills the ring entirely at full
+     cover (the patch needs no blur anyway) and shrinks it proportionally at
+     partial cover. Do not "simplify" this back to a constant radius. */
+  filter: contrast(calc(1 - var(--feedblur-cover)))
+          brightness(calc(1 + (2 * var(--feedblur-cover-lum) - 1) * var(--feedblur-cover)))
+          blur(calc(var(--feedblur-radius) * (1 - var(--feedblur-cover))));
+  clip-path: inset(0);
+}
+
+/* 2d. Once an element is CONFIRMED (marker present), give it a transition so
+   the hover-out / focus-out re-blur animates smoothly. Confirmed elements
+   only ever enter the blurred state from a reveal (their blur rule matches
+   continuously otherwise), so this cannot reintroduce a sharp blur-in flash.
+   transition-delay: 0ms = re-blur is immediate; the reveal delay comes from
+   rule 3's destination state. Coarse-only (not-yet-classified) elements get
+   an instant re-blur instead — the fail-safe direction. */
+html:not([data-feedblur-off]) :where(
+  [data-feedblur="media"],
+  [data-feedblur="video"],
+  [data-feedblur="avatar"]
+) {
+  transition: filter 150ms ease;
+  transition-delay: 0ms;
+}
+
+/* ---- 3. Hover reveal (pure CSS — zero JS on the hover path) ---------------
+   transition-delay here applies on hover-IN only (destination-state
+   semantics); rule 2's 0ms applies on hover-OUT. A pass-over shorter than the
+   delay fires transitioncancel and never shows a revealed frame — that's the
+   revealDelayMs setting implemented entirely in CSS.
+   The [data-feedblur-scope] branch: content.js stamps that attribute on a
+   confirmed media element's parent, so hovering Facebook's sibling-overlay
+   video controls / link overlays (which cover the media without being its
+   descendants) still reveals. */
+html:not([data-feedblur-off]):not([data-feedblur-nohover]) :where(
+  img[src*="scontent"]:not([data-feedblur]),
+  img[srcset*="scontent"]:not([data-feedblur]),
+  img[src*="external"]:not([data-feedblur]),
+  picture:has(source[srcset*="scontent"]) img:not([data-feedblur]),
+  div[style*="background-image"][style*="scontent"]:not([data-feedblur]),
+  video:not([data-feedblur]),
+  svg:not([data-feedblur]) image[*|href*="scontent"],
+  [data-feedblur="media"],
+  [data-feedblur="video"],
+  [data-feedblur="avatar"]
+):hover,
+html:not([data-feedblur-off]):not([data-feedblur-nohover])
+  [data-feedblur-scope]:hover :where(
+    [data-feedblur="media"],
+    [data-feedblur="video"],
+    [data-feedblur="avatar"]
+  ) {
+  filter: none;   /* clears blur AND cover — one property, one transition */
+  /* Shorthand BEFORE the delay longhand — the shorthand resets delay to 0s. */
+  transition: filter 150ms ease;
+  transition-delay: var(--feedblur-reveal-delay);
+}
+
+/* ---- 4. Keyboard-focus reveal (accessibility) -----------------------------
+   Always active regardless of the hover setting; no reveal delay for keyboard
+   users. :focus-visible (not :focus/:focus-within) so mouse clicks don't
+   reveal. Three placements cover "the element or an ancestor receives
+   keyboard focus": focused ancestor (the post's <a> wrapper) via descendant
+   combinator, the element itself (a focusable <video>), and focus landing on
+   a descendant control via :has(). These tie the video/avatar blur rules on
+   specificity — source order after them resolves the tie; keep this section
+   below section 2. */
+html:not([data-feedblur-off]) :focus-visible :where(
+  img[src*="scontent"],
+  img[srcset*="scontent"],
+  img[src*="external"],
+  picture:has(source[srcset*="scontent"]) img,
+  div[style*="background-image"][style*="scontent"],
+  video,
+  svg image[*|href*="scontent"],
+  [data-feedblur="media"], [data-feedblur="video"], [data-feedblur="avatar"]
+),
+html:not([data-feedblur-off]) :where(
+  [data-feedblur="media"], [data-feedblur="video"], [data-feedblur="avatar"],
+  video
+):focus-visible,
+html:not([data-feedblur-off]) :where(
+  [data-feedblur="media"], [data-feedblur="video"], [data-feedblur="avatar"]
+):has(:focus-visible) {
+  filter: none;
+  transition: filter 150ms ease;
+  transition-delay: 0ms;
+}
+
+/* ---- 5. Fullscreen = explicit intent to view ---- */
+:fullscreen :where([data-feedblur], video, img),
+video:fullscreen,
+[data-feedblur]:fullscreen {
+  filter: none !important;
+}
+
+/* ---- 6. will-change, only while a filter transition is live ---------------
+   The class is toggled by delegated transitionrun / transitionend /
+   transitioncancel listeners in content.js (filtered on propertyName ===
+   'filter'). Chosen over a :hover { will-change } rule because that would
+   demote the compositor layer at the exact moment the expensive re-blur
+   transition starts; the listeners cover both directions and are not on the
+   reveal path — hover reveal itself remains 100% CSS. */
+.feedblur-anim {
+  will-change: filter;
+}

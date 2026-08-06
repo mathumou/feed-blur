@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Feed Blur</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Feed Blur</h1>
+    <label class="switch" title="Blur media on Facebook (all tabs)">
+      <input type="checkbox" id="enabled">
+      <span class="track"></span>
+    </label>
+  </header>
+
+  <section>
+    <div class="row">
+      <label for="blurRadius">Blur strength</label>
+      <output id="radiusOut">8 px</output>
+    </div>
+    <input type="range" id="blurRadius" min="1" max="40" step="1" value="8">
+    <div class="row">
+      <label for="coverOpacity">Cover</label>
+      <output id="coverOpacityOut">0 %</output>
+    </div>
+    <input type="range" id="coverOpacity" min="0" max="100" step="5" value="0">
+    <!-- Pure-CSS mock photo (gradients only — no images, no network). -->
+    <div class="preview-frame"><div id="preview"></div></div>
+  </section>
+
+  <section id="tabSection">
+    <div class="row">
+      <span id="tabStateLabel">Following global setting</span>
+      <button id="tabToggle">Toggle tab</button>
+    </div>
+    <p class="hint">Shortcut: <kbd>Alt</kbd>+<kbd>B</kbd> toggles the current tab</p>
+    <p class="hint warn" id="warn" hidden></p>
+  </section>
+
+  <footer>
+    <a href="#" id="openOptions">All settings</a>
+  </footer>
+
+  <script src="settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

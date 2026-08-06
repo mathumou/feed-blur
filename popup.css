@@ -1,0 +1,164 @@
+/* Feed Blur — popup.css */
+
+body {
+  width: 280px;
+  margin: 0;
+  padding: 12px 14px;
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1c1e21;
+  background: #fff;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+h1 {
+  font-size: 15px;
+  margin: 0;
+}
+
+section {
+  margin-bottom: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+input[type="range"] {
+  width: 100%;
+  margin: 4px 0 8px;
+}
+
+output {
+  font-variant-numeric: tabular-nums;
+  color: #65676b;
+}
+
+/* Mock photo: sky, sun, hills — gradients only, blurred by the slider value.
+   The blur is scaled to half the real radius because the thumbnail is a
+   fraction of real media size; full radius would over-smear the preview. */
+.preview-frame {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #d0d2d6;
+}
+
+#preview {
+  height: 72px;
+  background:
+    radial-gradient(circle at 76% 26%, #ffd76e 0 9%, transparent 12%),
+    linear-gradient(180deg, #7ec3e8 0 55%, #6aa657 55% 78%, #4d7a3f 78% 100%);
+  /* Same chain as content.css section 2, with luminance 1 (white page);
+     blur scales down with cover, mirroring the real rules. */
+  filter: contrast(calc(1 - var(--c, 0)))
+          brightness(calc(1 + var(--c, 0)))
+          blur(calc(var(--r, 8) * 0.5px * (1 - var(--c, 0))));
+  transition: filter 150ms ease;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch .track {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: #ccd0d5;
+  transition: background 120ms ease;
+}
+
+.switch .track::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  top: 2px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 120ms ease;
+}
+
+.switch input:checked + .track {
+  background: #1b74e4;
+}
+
+.switch input:checked + .track::before {
+  transform: translateX(16px);
+}
+
+.switch input:focus-visible + .track {
+  outline: 2px solid #1b74e4;
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid #ccd0d5;
+  border-radius: 6px;
+  background: #f0f2f5;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #e4e6e9;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: #65676b;
+  font-size: 12px;
+}
+
+.hint.warn {
+  color: #b0620b;
+}
+
+kbd {
+  font: 11px/1 system-ui, sans-serif;
+  border: 1px solid #ccd0d5;
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  background: #f0f2f5;
+}
+
+#tabSection.inert .row,
+#tabSection.inert .hint:not(.warn) {
+  opacity: 0.5;
+}
+
+footer {
+  border-top: 1px solid #e4e6e9;
+  padding-top: 8px;
+}
+
+footer a {
+  color: #1b74e4;
+  text-decoration: none;
+}

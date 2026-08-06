@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Feed Blur settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <h1>Feed Blur settings</h1>
+  <p class="lede">Changes apply immediately to every open Facebook tab — no reload needed.</p>
+
+  <section>
+    <label class="check">
+      <input type="checkbox" id="enabled">
+      <span>Enable blurring</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="blurVideos">
+      <span>Blur videos (including Reels and autoplay)</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="blurAvatars">
+      <span>Blur profile pictures (avatars)</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="unblurOnHover">
+      <span>Reveal on hover — move the mouse over media to see it (off = media stays hidden)</span>
+    </label>
+  </section>
+
+  <section>
+    <div class="row">
+      <label for="blurRadius">Blur strength</label>
+      <output id="blurRadiusOut">8 px</output>
+    </div>
+    <input type="range" id="blurRadius" min="1" max="40" step="1" value="8">
+    <div class="row">
+      <label for="coverOpacity">Cover — fades media into the page background (100% hides it completely)</label>
+      <output id="coverOpacityOut">0 %</output>
+    </div>
+    <input type="range" id="coverOpacity" min="0" max="100" step="5" value="0">
+    <div class="preview-frame"><div id="preview"></div></div>
+  </section>
+
+  <section>
+    <div class="row">
+      <label for="revealDelayMs">Reveal delay (hold hover this long before revealing)</label>
+      <output id="revealDelayMsOut">0 ms</output>
+    </div>
+    <input type="range" id="revealDelayMs" min="0" max="1000" step="50" value="0">
+  </section>
+
+  <section>
+    <div class="row">
+      <label for="minSize">Minimum media size (smaller media is never blurred)</label>
+      <output id="minSizeOut">100 px</output>
+    </div>
+    <input type="range" id="minSize" min="0" max="600" step="10" value="100">
+  </section>
+
+  <button id="restore">Restore defaults</button>
+
+  <script src="settings.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
